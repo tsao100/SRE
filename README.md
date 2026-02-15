@@ -148,3 +148,5 @@ The English descriptions above are Chinese Translation as below:-
 對於無限制的保存代碼行數，我使用 TR LOGS 技術在 SAVE 命令之後記錄執行 CS:IP 流程。首先我製作了一個 250 行的代碼來保存並成功執行 CS:IP 流程。其次，我再添加一行，總共 251 行，以保存並獲取失敗執行的CS:IP 流程。第三，我比較了這兩個LOGS文件，然後再啟動程式追踪至相異處數次(因為該處同樣地執行數次後才分歧，詳見LOGS文件)，發現exe文件中保存了一個數字“FA 00”=250，它會限制250個代碼行。四、將“FA 00”改為“FF 7F”得到32767行，解鎖250行代碼限制。
 
 該操作的演示：[視頻](https://youtu.be/rULei8prL60)
+
+有了AI的幫助，我將asm以C++改寫，如AME2_1.cpp所示。
