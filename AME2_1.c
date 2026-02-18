@@ -1,113 +1,129 @@
+/* SERIAL.C
+   Microsoft C 6.0 compatible
+   16-bit DOS program
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-static unsigned long calc_auth(long A, long B, int flag)
+/* 全域變數 (對應原 ASM 全域區) */
+
+unsigned long g_part1;      /* 萬位群 */
+unsigned long g_part2;      /* 千位以下 */
+unsigned long g_mid1;
+unsigned long g_mid2;
+int g_flag_special = 0;
+
+
+/* --------------------------------------------------
+   核心授權碼演算法
+   (對應 sub_3A698)
+-------------------------------------------------- */
+unsigned long generate_auth_code(void)
 {
-    long E36C, E370, E374, E378;
-    unsigned long var_4, var_8, var_C, var_10, var_14;
-    unsigned long edi, eax, edx;
+    unsigned long edi = 0;
+    unsigned long eax = 0;
+    unsigned long edx = 0;
+    unsigned long temp1;
+    unsigned long extra;
 
-    E36C = A / 10000L;
-    E370 = A % 10000L;
-    E374 = (E36C % 100L) + (B % 100L) * 100L;
-    E378 = (E36C / 100L) + (B / 100L) * 100L;
+    /* 第一階段 */
+    edx = g_part2 / 256;
+    edi = edx;
 
-    printf("DEBUG: A=%ld, B=%ld, flag=%d\n", A, B, flag);
-    printf("DEBUG: E36C=%ld, E370=%ld, E374=%ld, E378=%ld\n", 
-           E36C, E370, E374, E378);
+    edi ^= 0x41;
+    edi += g_mid1;
 
-    /* Step 1 */
-    edx = (unsigned long)(E370 % 256L);
-    eax = (unsigned long)(E370 / 256L);
-    var_C = edx;
-    edi = eax ^ 0x41UL;
-    edi += 2UL;
-    var_4 = edi;
-    printf("DEBUG Step1: edi=%08lX, var_C=%lu\n", edi, var_C);
+    temp1 = edi;
 
-    /* Step 2 */
-    edi = var_4 << 23;
-    eax = var_4 << 15;
+    edi <<= 23;
+
+    /* 第二階段 */
+    eax = temp1 << 15;
     eax += edi;
-    var_8 = eax;
-    printf("DEBUG Step2: var_8=%08lX\n", var_8);
 
-    /* Step 3 */
-    eax = (unsigned long)(E374 / 256L);
-    eax ^= 0x4DUL;
-    eax += var_8 + 1UL;
-    edi = var_4 + eax;
-    var_10 = edi;
-    printf("DEBUG Step3: var_10=%08lX\n", var_10);
+    /* 第三階段 */
+    edx = g_mid2 / 256;
+    edx ^= 0x4D;
 
-    /* Step 4 */
-    edi = (var_10 >> 16) + var_10;
-    eax = var_10 + edi;
-    edi = eax;
-    printf("DEBUG Step4: edi=%08lX\n", edi);
+    eax += edx;
+    eax++;
 
-    /* Step 5 */
-    eax = 0UL ^ edi;
-    eax = (eax & 0xFFFF0000UL) | ((eax & 0xFFFFUL) ^ 0xACADUL);
-    edi = var_C ^ 0x32UL;
-    edi += eax;
-    printf("DEBUG Step5: edi=%08lX\n", edi);
+    edi = temp1 + eax;
 
-    /* Step 7 */
-    if (flag) {
-        var_14 = edi;
-        edi <<= 10;
-        edx = (unsigned long)(E378 % 256L);
-        eax = (unsigned long)(E378 / 256L);
-        eax ^= edx;
-        eax = (eax & 0xFFFFFF00UL) | ((eax & 0xFFUL) ^ 0xB1UL);
-        eax += edi;
-        edi = var_14 + eax;
-        printf("DEBUG Step7: edi=%08lX\n", edi);
+    edi = (edi >> 16) + edi;
+    eax = edi + temp1;
+
+    /* magic constant */
+    eax ^= 0xACAD;
+
+    /* 特殊模式 */
+    if (g_flag_special)
+    {
+        extra = edi << 10;
+        extra ^= 0xB1;
+        eax += extra;
     }
 
-    /* Step 8 */
-    var_4 = edi;
-    if (edi & 0x80000000UL)
-        edi = (edi >> 1) | 0x80000000UL;
-    else
-        edi >>= 1;
-    edi += var_4;
-    printf("DEBUG Step8: edi=%08lX\n", edi);
+    /* 最終混合 */
+    edi = (eax >> 1) + eax;
+    eax = edi;
 
-    /* Step 9 */
-    eax = (unsigned long)(E374 & 0xFFL);
-    if (E374 < 0L && eax != 0UL)
-        eax -= 0x100UL;
-    eax = (eax & 0xFFFFFF00UL) | ((eax & 0xFFUL) ^ 0xD2UL);
-    eax += edi;
-    printf("DEBUG Step9: eax=%08lX\n", eax);
+    eax ^= 0xD2;
 
     return eax;
 }
 
+
+/* --------------------------------------------------
+   解析輸入
+-------------------------------------------------- */
+int parse_serial(char *input)
+{
+    int partA = 0;
+    long partB = 0;
+    int full;
+
+    if (sscanf(input, "%d-%ld", &partA, &partB) != 2)
+        return 0;
+
+    if (strchr(input, '-') == NULL)
+        g_flag_special = 1;
+
+    full = partA;
+
+    g_part1 = full / 10000;
+    g_part2 = full % 10000;
+
+    /* 模擬原始拆分邏輯 */
+    g_mid1 = (g_part2 % 100) * 20 + (g_part1 % 100);
+    g_mid2 = (g_part1 % 100) * 20 + (g_part2 % 100);
+
+    return 1;
+}
+
+
+/* --------------------------------------------------
+   主程式
+-------------------------------------------------- */
 int main(void)
 {
-    char serial[20];
-    int part1, n, flag;
-    long part2, A, B;
+    char input[64];
     unsigned long auth;
 
     printf("Enter serial no: ");
-    scanf("%s", serial);
+    scanf("%63s", input);
 
-    n = sscanf(serial, "%d-%ld", &part1, &part2);
-    if (n != 2) {
-        printf("Invalid format!\n");
+    if (!parse_serial(input))
+    {
+        printf("Invalid serial format!\n");
         return 1;
     }
 
-    flag = (serial[2] != '-') ? 1 : 0;
-    B = (long)((unsigned)part1 & 0xFFFU);
-    A = part2;
+    auth = generate_auth_code();
 
-    auth = calc_auth(A, B, flag);
-    printf("\nThe authorization code is %08lX.\n", auth);
+    printf("The authorization code is %08lX.\n", auth);
 
     return 0;
 }
