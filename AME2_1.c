@@ -1,5 +1,5 @@
 /*
- *  serial_auth.c - 完整数据区初始化版本
+ *  serial_auth.c - 完整指针访问模拟版本
  *  Build: cl /AS /Ox serial_auth.c
  */
 
@@ -12,28 +12,29 @@ static unsigned char data_segment[0x600];
 
 #define DATA_BASE 0xDEAC
 
-/* 关键地址 */
+/* 数据区地址 */
 #define ADDR_DEAC  0xDEAC
 #define ADDR_DEB4  0xDEB4
 #define ADDR_DEB8  0xDEB8
 #define ADDR_DEBC  0xDEBC
-#define ADDR_DEBE  0xDEBE
-#define ADDR_DEC0  0xDEC0
-#define ADDR_DEC4  0xDEC4
-#define ADDR_DECC  0xDECC
-#define ADDR_DED0  0xDED0
-#define ADDR_DED4  0xDED4  /* 字符串缓冲区 */
-#define ADDR_DED6  0xDED6
-#define ADDR_DEDD  0xDEDD
-#define ADDR_DEE0  0xDEE0
-#define ADDR_DEE4  0xDEE4  /* sscanf 第一个输出 */
-#define ADDR_DEE8  0xDEE8  /* sscanf 第二个输出 */
-#define ADDR_E008  0xE008  /* 标志字节 */
-#define ADDR_E36C  0xE36C
-#define ADDR_E370  0xE370
-#define ADDR_E374  0xE374
-#define ADDR_E378  0xE378
-#define ADDR_DF74  0xDF74
+#define ADDR_DEC0  0xDEC0  /* 指针位置 */
+#define ADDR_DEC4  0xDEC4  /* 指针位置 */
+#define ADDR_DECC  0xDECC  /* 指针位置 */
+#define ADDR_DED0  0xDED0  /* 指针位置 */
+#define ADDR_DED4  0xDED4
+#define ADDR_E32C  0xE32C  /* 指针位置 */
+#define ADDR_E330  0xE330  /* 指针位置 */
+#define ADDR_E334  0xE334  /* 指针位置 */
+#define ADDR_E338  0xE338  /* 指针位置 */
+
+/* 数据位置（通过指针计算得出的实际地址） */
+#define ADDR_DEB8_DATA  0xDEB8   /* off_DEC0 - 0x114 */
+#define ADDR_DEE5_FLAG  0xDEE5   /* off_DECC - 0xC4 */
+#define ADDR_E36C_DATA  0xE36C   /* off_E32C - 0x1D */
+#define ADDR_E370_DATA  0xE370   /* off_E330 - 0x33 */
+#define ADDR_E374_DATA  0xE374   /* off_E334 - 0x53 */
+#define ADDR_E378_DATA  0xE378   /* off_E338 - 0x61 */
+#define ADDR_DF74_RESULT 0xDF74  /* off_DEC4 - 0x1E4 */
 
 #define ADDR_TO_IDX(addr) ((addr) - DATA_BASE)
 
@@ -49,60 +50,59 @@ static void init_data_segment(void)
 {
     memset(data_segment, 0, sizeof(data_segment));
     
-    /* 编译时确定的常量 */
-    WRITE_DWORD(ADDR_DEAC, 0x6AA602B0UL);  /* dword_DEAC */
+    /* 常量 */
+    WRITE_DWORD(ADDR_DEAC, 0x6AA602B0UL);
     WRITE_DWORD(ADDR_DEAC + 4, 0UL);
+    WRITE_DWORD(ADDR_DEB4, 1UL);
+    WRITE_DWORD(ADDR_DEB8, 2UL);
+    WRITE_WORD(ADDR_DEBC, 1);
     
-    WRITE_DWORD(ADDR_DEB4, 1UL);           /* dword_DEB4 = 1 */
-    WRITE_DWORD(ADDR_DEB8, 2UL);           /* dword_DEB8 = 2 */
-    WRITE_WORD(ADDR_DEBC, 1);              /* word_DEBC = 1 */
-    WRITE_WORD(ADDR_DEBE, 0);              /* word_DEBE = 0 */
-    
-    /* 指针初始化（这些是编译时计算的地址，在 C 中可以不初始化，
-       因为我们直接用绝对地址访问）*/
-    
-    /* 初始字符串数据（这可能是调试残留） */
-    WRITE_BYTE(ADDR_DED4, 0x31);      /* '1' */
-    WRITE_BYTE(ADDR_DED4 + 1, 0x31);  /* '1' */
-    WRITE_BYTE(ADDR_DED6, 0x30);      /* '0' */
-    WRITE_BYTE(ADDR_DED6 + 1, 0x2D);  /* '-' */
-    /* "1030" 以小端序存储 */
-    WRITE_BYTE(ADDR_DED6 + 2, 0x31);  /* '1' */
-    WRITE_BYTE(ADDR_DED6 + 3, 0x30);  /* '0' */
-    WRITE_BYTE(ADDR_DED6 + 4, 0x33);  /* '3' */
-    WRITE_BYTE(ADDR_DED6 + 5, 0x30);  /* '0' */
-    WRITE_BYTE(ADDR_DED6 + 6, 0x34);  /* '4' */
-    WRITE_BYTE(ADDR_DEDD, 0x31);      /* '1' */
-    WRITE_BYTE(ADDR_DEDD + 1, 0x31);  /* '1' */
-    WRITE_BYTE(ADDR_DEDD + 2, 0x31);  /* '1' */
-    WRITE_BYTE(ADDR_DEE0, 0x00);      /* 字符串结束符 */
-    
-    /* 初始的测试数据（可能是调试残留）*/
-    WRITE_DWORD(ADDR_DEE4, 0UL);
-    WRITE_DWORD(ADDR_DEE8, 0x9D3A6FUL);  /* = 10304111 */
+    /* 指针初始化（编译时确定的地址） */
+    WRITE_DWORD(ADDR_DEC0, 0xDFCCUL);   /* (offset dword_DFC8)+4 */
+    WRITE_DWORD(ADDR_DEC4, 0xE158UL);   /* (offset dword_E090)+0C8h */
+    WRITE_DWORD(ADDR_DECC, 0xDFA9UL);   /* offset dword_DFA6 + 3 */
+    WRITE_DWORD(ADDR_DED0, 0xDF51UL);   /* offset byte_DF51 */
+    WRITE_DWORD(ADDR_E32C, 0xE389UL);   /* (offset off_E388)+1 */
+    WRITE_DWORD(ADDR_E330, 0xE3A3UL);   /* offset byte_E3A3 */
+    WRITE_DWORD(ADDR_E334, 0xE3C7UL);   /* (offset dbl_E3C0)+7 */
+    WRITE_DWORD(ADDR_E338, 0xE3D9UL);   /* offset byte_E3D9 */
 }
 
-/* ===== 计算授权码 ===== */
+/* ===== 计算授权码（精确模拟指针访问）===== */
 static unsigned long calc_auth(void)
 {
     unsigned long var_4, var_8, var_C, var_10, var_14;
     unsigned long edi, eax, edx;
     unsigned long E370, E374, E378;
+    unsigned long ptr_val;
     unsigned char flag_byte;
     unsigned long temp1, temp2;
 
-    /* 从数据区读取 */
-    E370 = READ_DWORD(ADDR_E370);
-    E374 = READ_DWORD(ADDR_E374);
-    E378 = READ_DWORD(ADDR_E378);
-    flag_byte = READ_BYTE(ADDR_E008);
+    /* 模拟：mov eax, off_E330; mov eax, [eax - 33h] */
+    ptr_val = READ_DWORD(ADDR_E330);
+    E370 = READ_DWORD(ptr_val - 0x33);
+    
+    /* 模拟：mov edi, off_E334; mov eax, [edi - 53h] */
+    ptr_val = READ_DWORD(ADDR_E334);
+    E374 = READ_DWORD(ptr_val - 0x53);
+    
+    /* 模拟：mov eax, off_E338; mov eax, [eax - 61h] */
+    ptr_val = READ_DWORD(ADDR_E338);
+    E378 = READ_DWORD(ptr_val - 0x61);
+    
+    /* 模拟：mov eax, off_DECC; test byte ptr[eax-0C4h], 10h */
+    ptr_val = READ_DWORD(ADDR_DECC);
+    flag_byte = READ_BYTE(ptr_val - 0xC4);
 
     /* Step 1 */
     edx = E370 % 256UL;
     eax = E370 / 256UL;
     var_C = edx;
     edi = eax ^ 0x41UL;
-    edi += READ_DWORD(ADDR_DEB8);
+    
+    /* 模拟：mov eax, off_DEC0; add edi, [eax - 114h] */
+    ptr_val = READ_DWORD(ADDR_DEC0);
+    edi += READ_DWORD(ptr_val - 0x114);
     var_4 = edi;
 
     /* Step 2 */
@@ -149,28 +149,51 @@ static unsigned long calc_auth(void)
     edi += var_4;
 
     /* Step 9 */
+    /* 再次读取 E374：mov eax, off_E334; mov eax, [eax - 53h] */
+    ptr_val = READ_DWORD(ADDR_E334);
+    E374 = READ_DWORD(ptr_val - 0x53);
+    
     eax = E374 & 0xFFUL;
     if ((long)E374 < 0L && eax != 0UL)
         eax -= 0x100UL;
     eax = (eax & 0xFFFFFF00UL) | ((eax & 0xFFUL) ^ 0xD2UL);
     eax += edi;
 
-    WRITE_DWORD(ADDR_DF74, eax);
+    /* 模拟：mov eax, off_DEC4; mov [eax - 1E4h], edi */
+    ptr_val = READ_DWORD(ADDR_DEC4);
+    WRITE_DWORD(ptr_val - 0x1E4, eax);
+    
     return eax;
 }
 
-/* ===== 预处理序列号 ===== */
+/* ===== 预处理序列号（模拟 main 函数）===== */
 static void preprocess_serial(long A, long B, int is_long_prefix)
 {
     long E36C;
+    unsigned long ptr_val;
 
     E36C = A / 10000L;
 
-    WRITE_DWORD(ADDR_E36C, (unsigned long)E36C);
-    WRITE_DWORD(ADDR_E370, (unsigned long)(A % 10000L));
-    WRITE_DWORD(ADDR_E374, (unsigned long)((E36C % 100L) + (B % 100L) * 100L));
-    WRITE_DWORD(ADDR_E378, (unsigned long)((E36C / 100L) + (B / 100L) * 100L));
-    WRITE_BYTE(ADDR_E008, is_long_prefix ? 0x10 : 0x00);
+    /* 模拟：mov edx, off_E32C; mov [edx-1Dh], eax */
+    ptr_val = READ_DWORD(ADDR_E32C);
+    WRITE_DWORD(ptr_val - 0x1D, (unsigned long)E36C);
+    
+    /* 模拟：mov eax, off_E330; mov [eax-33h], edx */
+    ptr_val = READ_DWORD(ADDR_E330);
+    WRITE_DWORD(ptr_val - 0x33, (unsigned long)(A % 10000L));
+    
+    /* 模拟：mov eax, off_E334; mov [eax-53h], edx */
+    ptr_val = READ_DWORD(ADDR_E334);
+    WRITE_DWORD(ptr_val - 0x53, (unsigned long)((E36C % 100L) + (B % 100L) * 100L));
+    
+    /* 模拟：mov edx, off_E338; mov [edx-61h], eax */
+    ptr_val = READ_DWORD(ADDR_E338);
+    WRITE_DWORD(ptr_val - 0x61, (unsigned long)((E36C / 100L) + (B / 100L) * 100L));
+    
+    /* 模拟：mov eax, off_DECC; or byte ptr[eax-0C4h], 10h */
+    ptr_val = READ_DWORD(ADDR_DECC);
+    if (is_long_prefix)
+        WRITE_BYTE(ptr_val - 0xC4, READ_BYTE(ptr_val - 0xC4) | 0x10);
 }
 
 /* ===== 主程序 ===== */
@@ -179,6 +202,7 @@ int main(void)
     char serial[20];
     int part1, n, is_long_prefix;
     long part2, A, B;
+    unsigned long ptr_val;
 
     init_data_segment();
 
@@ -198,7 +222,9 @@ int main(void)
     preprocess_serial(A, B, is_long_prefix);
     calc_auth();
 
-    printf("The authorization code is %08lX.\n", READ_DWORD(ADDR_DF74));
+    /* 模拟：mov eax, off_DEC4; mov eax, [eax - 1E4h] */
+    ptr_val = READ_DWORD(ADDR_DEC4);
+    printf("The authorization code is %08lX.\n", READ_DWORD(ptr_val - 0x1E4));
 
     return 0;
 }
