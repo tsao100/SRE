@@ -1,160 +1,114 @@
-/* MSC 6.0 COMPATIBLE VERSION */
+/*
+ *  serial_auth.c - 修正 Step 4 移位問題
+ *  Build: cl /AS /Ox serial_auth.c
+ */
 
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
-typedef long s32;
-typedef unsigned long u32;
-
-/* 模擬資料段 */
-unsigned char mem[0x4000];
-
-/* ====== OFFSET 定義 ====== */
-
-#define BASE        0x1000
-
-#define OFF_DEC0    (BASE + 0x100)
-#define OFF_DEC4    (BASE + 0x104)
-#define OFF_DECC    (BASE + 0x10C)
-
-#define OFF_E32C    (BASE + 0x300)
-#define OFF_E330    (BASE + 0x304)
-#define OFF_E334    (BASE + 0x308)
-#define OFF_E338    (BASE + 0x30C)
-
-/* ====== 32-bit wrap ====== */
-
-u32 U32(u32 x)
+static unsigned long calc_auth(long A, long B, int flag)
 {
-    return x & 0xFFFFFFFFUL;
-}
+    long E36C, E370, E374, E378;
+    unsigned long var_4, var_8, var_C, var_10, var_14;
+    unsigned long edi, eax, edx;
 
-void W32(u32 addr, u32 val)
-{
-    *(u32 *)(mem + (addr - BASE)) = U32(val);
-}
+    E36C = A / 10000L;
+    E370 = A % 10000L;
+    E374 = (E36C % 100L) + (B % 100L) * 100L;
+    E378 = (E36C / 100L) + (B / 100L) * 100L;
 
-u32 R32(u32 addr)
-{
-    return *(u32 *)(mem + (addr - BASE));
-}
+    /* Step 1 */
+    edx = (unsigned long)(E370 % 256L);
+    eax = (unsigned long)(E370 / 256L);
+    var_C = edx;
+    edi = eax ^ 0x41UL;
+    edi += 2UL;
+    var_4 = edi;
 
-/* ====== sub_3A698 ====== */
+    /* Step 2 */
+    edi = var_4 << 23;
+    eax = var_4 << 15;
+    eax += edi;
+    var_8 = eax;
 
-u32 generate(void)
-{
-    s32 eax;
-    s32 edx;
-    s32 ecx;
-    s32 edi;
+    /* Step 3 */
+    eax = (unsigned long)(E374 / 256L);
+    eax ^= 0x4DUL;
+    eax += var_8 + 1UL;
+    edi = var_4 + eax;
+    var_10 = edi;
 
-    s32 tmp4;
-    s32 tmpC;
-    s32 tmp10;
-    s32 extra;
+    /* Step 4 - 修正移位問題 */
+    /* 方法1: 用除法代替移位 */
+    edi = (var_10 / 65536UL) + var_10;
+    
+    /* 方法2: 分兩次移位（擇一使用）
+    edi = var_10 >> 8;
+    edi = edi >> 8;
+    edi += var_10;
+    */
+    
+    eax = var_10 + edi;
+    edi = eax;
 
-    ecx = 0x100;
+    /* Step 5 */
+    eax = 0UL ^ edi;
+    eax = (eax & 0xFFFF0000UL) | ((eax & 0xFFFFUL) ^ 0xACADUL);
+    edi = var_C ^ 0x32UL;
+    edi += eax;
 
-    eax = R32(OFF_E330 - 0x33);
-    edx = eax / ecx;
-
-    edi = edx;
-    edi = edi ^ 0x41;
-
-    eax = R32(OFF_DEC0 - 0x114);
-    edi = edi + eax;
-
-    tmp4 = edi;
-
-    edi = U32(edi << 23);
-
-    eax = U32(tmp4 << 15);
-    eax = U32(eax + edi);
-
-    tmp10 = eax;
-
-    eax = R32(OFF_E334 - 0x53);
-
-    edx = eax / ecx;
-    eax = edx ^ 0x4D;
-
-    eax = U32(eax + tmp10 + 1);
-
-    edi = tmp4 + eax;
-
-    tmpC = edi;
-
-    edi = (edi >> 16) + tmpC;
-    eax = tmpC + edi;
-
-    eax = eax ^ 0xACAD;
-
-    if (R32(OFF_DECC - 0xC5) & 0x10)
-    {
-        extra = tmpC << 10;
-        extra = extra ^ 0xB1;
-        eax = U32(eax + extra);
+    /* Step 7 */
+    if (flag) {
+        var_14 = edi;
+        edi <<= 10;
+        edx = (unsigned long)(E378 % 256L);
+        eax = (unsigned long)(E378 / 256L);
+        eax ^= edx;
+        eax = (eax & 0xFFFFFF00UL) | ((eax & 0xFFUL) ^ 0xB1UL);
+        eax += edi;
+        edi = var_14 + eax;
     }
 
-    edi = (eax >> 1) + eax;
-    eax = edi ^ 0xD2;
+    /* Step 8 */
+    var_4 = edi;
+    if (edi & 0x80000000UL)
+        edi = (edi >> 1) | 0x80000000UL;
+    else
+        edi >>= 1;
+    edi += var_4;
 
-    return U32(eax);
+    /* Step 9 */
+    eax = (unsigned long)(E374 & 0xFFL);
+    if (E374 < 0L && eax != 0UL)
+        eax -= 0x100UL;
+    eax = (eax & 0xFFFFFF00UL) | ((eax & 0xFFUL) ^ 0xD2UL);
+    eax += edi;
+
+    return eax;
 }
-
-/* ====== main ====== */
 
 int main(void)
 {
-    long A;
-    long B;
-
-    s32 high;
-    s32 low;
-    s32 x;
-    s32 q;
-    s32 r;
-    s32 mid1;
-    s32 mid2;
-
-    char input[64];
-    char *p;
+    char serial[20];
+    int part1, n, flag;
+    long part2, A, B;
+    unsigned long auth;
 
     printf("Enter serial no: ");
-    scanf("%63s", input);
+    scanf("%s", serial);
 
-    if (sscanf(input, "%ld-%ld", &A, &B) != 2)
-    {
-        printf("Format error\n");
+    n = sscanf(serial, "%d-%ld", &part1, &part2);
+    if (n != 2) {
+        printf("Invalid format!\n");
         return 1;
     }
 
-    high = B / 10000;
-    low  = B % 10000;
+    flag = (serial[2] != '-') ? 1 : 0;
+    B = (long)((unsigned)part1 & 0xFFFU);
+    A = part2;
 
-    W32(OFF_E32C - 0x1D, high);
-    W32(OFF_E330 - 0x33, low);
-
-    x = high & 0xFFF;
-
-    q = x / 100;
-    r = x % 100;
-
-    mid1 = r * 100 + (low / 100);
-    mid2 = q * 100 + (low % 100);
-
-    W32(OFF_E334 - 0x53, mid1);
-    W32(OFF_E338 - 0x61, mid2);
-
-    p = strchr(input, '-');
-
-    if (p == NULL)
-        W32(OFF_DECC - 0xC5, 0x10);
-    else
-        W32(OFF_DECC - 0xC5, 0);
-
-    printf("The authorization code is %08lX.\n",
-           generate());
+    auth = calc_auth(A, B, flag);
+    printf("The authorization code is %08lX.\n", auth);
 
     return 0;
 }
