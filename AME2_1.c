@@ -1,59 +1,46 @@
-/* MSC 6.0 exact behavioral reconstruction */
-
 #include <stdio.h>
 #include <string.h>
 
-/* 全域資料 */
-long gA;      /* sscanf 第一段 */
-long gB;      /* sscanf 第二段 */
-int  gFlag = 0;
+long A, B;
+long high, low;
+long mid1, mid2;
+int flag = 0;
 
-
-/* 這函式完全模擬 sub_3A698 */
 long generate_code(void)
 {
     long eax, edx, ecx;
-    long edi;
-    long temp4, temp8, tempC, temp10;
+    long edi, temp;
 
-    /* -------- 第一段 -------- */
-    eax = gB;
-    ecx = 256;
-    edx = eax / ecx;        /* idiv 100h */
+    /* === 對應 sub_3A698 === */
+
+    eax = low;
+    edx = eax / 256;
     edi = edx;
 
     edi ^= 0x41;
+    edi += mid1;
 
-    temp4 = edi;
-
+    temp = edi;
     edi <<= 23;
 
-    eax = temp4 << 15;
+    eax = temp << 15;
     eax += edi;
 
-    /* -------- 第二段 -------- */
-    edx = gA / 256;
+    edx = mid2 / 256;
     edx ^= 0x4D;
 
     eax += edx;
     eax++;
 
-    edi = temp4 + eax;
-    temp10 = edi;
-
-    edi = (edi >> 16) + temp10;
-    eax = temp10 + edi;
-
-    /* 模擬 imul eax, esi, 75BCD15h
-       但 esi = 0 所以結果 = 0 */
-    eax = 0 ^ eax;
+    edi = temp + eax;
+    edi = (edi >> 16) + edi;
+    eax = edi + temp;
 
     eax ^= 0xACAD;
 
-    /* 特殊旗標 */
-    if (gFlag)
+    if (flag)
     {
-        long extra = temp10 << 10;
+        long extra = temp << 10;
         extra ^= 0xB1;
         eax += extra;
     }
@@ -66,7 +53,6 @@ long generate_code(void)
     return eax;
 }
 
-
 int main(void)
 {
     char input[64];
@@ -74,15 +60,28 @@ int main(void)
     printf("Enter serial no: ");
     scanf("%63s", input);
 
-    if (sscanf(input, "%ld-%ld", &gA, &gB) != 2)
+    if (sscanf(input, "%ld-%ld", &A, &B) != 2)
     {
-        printf("Format error!\n");
+        printf("Format error\n");
         return 1;
     }
 
-    /* 判斷是否含 '-' */
     if (strchr(input, '-') == NULL)
-        gFlag = 1;
+        flag = 1;
+
+    high = B / 10000;
+    low  = B % 10000;
+
+    /* === 完整還原 main() 拆解邏輯 === */
+
+    {
+        long x = high & 0xFFF;
+        long q = x / 100;
+        long r = x % 100;
+
+        mid1 = r * 100 + (low / 100);
+        mid2 = q * 100 + (low % 100);
+    }
 
     printf("The authorization code is %08lX.\n",
            generate_code());
