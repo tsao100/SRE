@@ -1,72 +1,63 @@
-/* SERIAL.C
-   Microsoft C 6.0 compatible
-   16-bit DOS program
-*/
+/* MSC 6.0 exact behavioral reconstruction */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-/* 全域變數 (對應原 ASM 全域區) */
-
-unsigned long g_part1;      /* 萬位群 */
-unsigned long g_part2;      /* 千位以下 */
-unsigned long g_mid1;
-unsigned long g_mid2;
-int g_flag_special = 0;
+/* 全域資料 */
+long gA;      /* sscanf 第一段 */
+long gB;      /* sscanf 第二段 */
+int  gFlag = 0;
 
 
-/* --------------------------------------------------
-   核心授權碼演算法
-   (對應 sub_3A698)
--------------------------------------------------- */
-unsigned long generate_auth_code(void)
+/* 這函式完全模擬 sub_3A698 */
+long generate_code(void)
 {
-    unsigned long edi = 0;
-    unsigned long eax = 0;
-    unsigned long edx = 0;
-    unsigned long temp1;
-    unsigned long extra;
+    long eax, edx, ecx;
+    long edi;
+    long temp4, temp8, tempC, temp10;
 
-    /* 第一階段 */
-    edx = g_part2 / 256;
+    /* -------- 第一段 -------- */
+    eax = gB;
+    ecx = 256;
+    edx = eax / ecx;        /* idiv 100h */
     edi = edx;
 
     edi ^= 0x41;
-    edi += g_mid1;
 
-    temp1 = edi;
+    temp4 = edi;
 
     edi <<= 23;
 
-    /* 第二階段 */
-    eax = temp1 << 15;
+    eax = temp4 << 15;
     eax += edi;
 
-    /* 第三階段 */
-    edx = g_mid2 / 256;
+    /* -------- 第二段 -------- */
+    edx = gA / 256;
     edx ^= 0x4D;
 
     eax += edx;
     eax++;
 
-    edi = temp1 + eax;
+    edi = temp4 + eax;
+    temp10 = edi;
 
-    edi = (edi >> 16) + edi;
-    eax = edi + temp1;
+    edi = (edi >> 16) + temp10;
+    eax = temp10 + edi;
 
-    /* magic constant */
+    /* 模擬 imul eax, esi, 75BCD15h
+       但 esi = 0 所以結果 = 0 */
+    eax = 0 ^ eax;
+
     eax ^= 0xACAD;
 
-    /* 特殊模式 */
-    if (g_flag_special)
+    /* 特殊旗標 */
+    if (gFlag)
     {
-        extra = edi << 10;
+        long extra = temp10 << 10;
         extra ^= 0xB1;
         eax += extra;
     }
 
-    /* 最終混合 */
     edi = (eax >> 1) + eax;
     eax = edi;
 
@@ -76,54 +67,25 @@ unsigned long generate_auth_code(void)
 }
 
 
-/* --------------------------------------------------
-   解析輸入
--------------------------------------------------- */
-int parse_serial(char *input)
-{
-    int partA = 0;
-    long partB = 0;
-    int full;
-
-    if (sscanf(input, "%d-%ld", &partA, &partB) != 2)
-        return 0;
-
-    if (strchr(input, '-') == NULL)
-        g_flag_special = 1;
-
-    full = partA;
-
-    g_part1 = full / 10000;
-    g_part2 = full % 10000;
-
-    /* 模擬原始拆分邏輯 */
-    g_mid1 = (g_part2 % 100) * 20 + (g_part1 % 100);
-    g_mid2 = (g_part1 % 100) * 20 + (g_part2 % 100);
-
-    return 1;
-}
-
-
-/* --------------------------------------------------
-   主程式
--------------------------------------------------- */
 int main(void)
 {
     char input[64];
-    unsigned long auth;
 
     printf("Enter serial no: ");
     scanf("%63s", input);
 
-    if (!parse_serial(input))
+    if (sscanf(input, "%ld-%ld", &gA, &gB) != 2)
     {
-        printf("Invalid serial format!\n");
+        printf("Format error!\n");
         return 1;
     }
 
-    auth = generate_auth_code();
+    /* 判斷是否含 '-' */
+    if (strchr(input, '-') == NULL)
+        gFlag = 1;
 
-    printf("The authorization code is %08lX.\n", auth);
+    printf("The authorization code is %08lX.\n",
+           generate_code());
 
     return 0;
 }
