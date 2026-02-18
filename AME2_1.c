@@ -1,5 +1,5 @@
 /*
- *  serial_auth.c - 精确内存布局版
+ *  serial_auth.c - 精确内存布局模拟版
  *  Build: cl /AS /Ox serial_auth.c
  */
 
@@ -7,47 +7,57 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ===== 数据区结构（从 DEAC 到 E3D9）===== */
-typedef struct {
-    unsigned long dword_DEAC[2];    /* +0x00 */
-    unsigned long dword_DEB4;       /* +0x08 */
-    unsigned long dword_DEB8;       /* +0x0C: 值为2 */
-    unsigned long dword_DEBC;       /* +0x10 */
-    /* ... 省略中间大量数据 ... */
-    unsigned char padding[0x2D0];   /* 填充到正确位置 */
-    unsigned long data_E370;        /* E370 相对 DEAC 的偏移 */
-    unsigned long data_E374;        /* E374 */
-    unsigned long data_E378;        /* E378 */
-    unsigned char flag_byte;        /* 标志 */
-} DataArea;
+/* ===== 数据区完整布局（0xDEAC ~ 0xE3D9）===== */
+static unsigned char data_segment[0x600];
 
-static DataArea g_data;
+/* 各数据项相对于 data_segment 起始的偏移 */
+#define BASE_OFFSET    0xDEAC
+#define OFF_DEAC       (0xDEAC - BASE_OFFSET)
+#define OFF_DEB8       (0xDEB8 - BASE_OFFSET)
+#define OFF_DEE4       (0xDEE4 - BASE_OFFSET)  /* 序列号第一段 */
+#define OFF_DEE8       (0xDEE8 - BASE_OFFSET)  /* 序列号第二段 */
+#define OFF_E008       (0xE008 - BASE_OFFSET)  /* 标志字节位置 */
+#define OFF_E30F       (0xE30F - BASE_OFFSET)  /* E36C 写入位置 */
+#define OFF_E370       (0xE370 - BASE_OFFSET)  /* A % 10000 */
+#define OFF_E374       (0xE374 - BASE_OFFSET)  /* 合成值1 */
+#define OFF_E378       (0xE378 - BASE_OFFSET)  /* 合成值2 */
+#define OFF_DF74       (0xDF74 - BASE_OFFSET)  /* 结果写入位置 */
 
-static void init_data(void)
+/* 读写数据区的宏 */
+#define READ_DWORD(off)  (*(unsigned long*)(data_segment + (off)))
+#define WRITE_DWORD(off, val)  (*(unsigned long*)(data_segment + (off)) = (val))
+#define READ_BYTE(off)   (*(unsigned char*)(data_segment + (off)))
+#define WRITE_BYTE(off, val)   (*(unsigned char*)(data_segment + (off)) = (val))
+
+/* 初始化数据区（编译时确定的值） */
+static void init_data_segment(void)
 {
-    memset(&g_data, 0, sizeof(g_data));
-    g_data.dword_DEB8 = 2UL;
+    memset(data_segment, 0, sizeof(data_segment));
+    
+    /* dword_DEB8 = 2 */
+    WRITE_DWORD(OFF_DEB8, 2UL);
 }
 
+/* 计算授权码 */
 static unsigned long calc_auth(void)
 {
     unsigned long var_4, var_8, var_C, var_10, var_14;
     unsigned long edi, eax, edx;
     unsigned long E370, E374, E378;
-    unsigned char flag;
+    unsigned char flag_byte;
 
     /* 从数据区读取 */
-    E370 = g_data.data_E370;
-    E374 = g_data.data_E374;
-    E378 = g_data.data_E378;
-    flag = g_data.flag_byte;
+    E370 = READ_DWORD(OFF_E370);
+    E374 = READ_DWORD(OFF_E374);
+    E378 = READ_DWORD(OFF_E378);
+    flag_byte = READ_BYTE(OFF_E008);
 
     /* Step 1 */
     edx = E370 % 256UL;
     eax = E370 / 256UL;
     var_C = edx;
     edi = eax ^ 0x41UL;
-    edi += g_data.dword_DEB8;
+    edi += READ_DWORD(OFF_DEB8);  /* +2 */
     var_4 = edi;
 
     /* Step 2 */
@@ -61,12 +71,12 @@ static unsigned long calc_auth(void)
     edi = var_4 + eax;
     var_10 = edi;
 
-    /* Step 4 */
+    /* Step 4 - 分步移位 */
     {
-        unsigned long temp1, temp2;
-        temp1 = var_10 >> 8;
-        temp2 = temp1 >> 8;  /* 分两次移位 */
-        edi = temp2 + var_10;
+        unsigned long temp;
+        temp = var_10 >> 8;
+        temp = temp >> 8;
+        edi = temp + var_10;
         eax = var_10 + edi;
         edi = eax;
     }
@@ -77,7 +87,7 @@ static unsigned long calc_auth(void)
     edi = (var_C ^ 0x32UL) + eax;
 
     /* Step 7 */
-    if (flag & 0x10) {
+    if (flag_byte & 0x10) {
         var_14 = edi;
         edi <<= 10;
         eax = (E378 / 256UL) ^ (E378 % 256UL);
@@ -99,17 +109,49 @@ static unsigned long calc_auth(void)
     if ((long)E374 < 0L && eax != 0UL)
         eax -= 0x100UL;
     eax = (eax & 0xFFFFFF00UL) | ((eax & 0xFFUL) ^ 0xD2UL);
+    eax += edi;
 
-    return eax + edi;
+    /* 写入结果到数据区 */
+    WRITE_DWORD(OFF_DF74, eax);
+    
+    return eax;
+}
+
+/* 预处理序列号（对应 main 函数） */
+static void preprocess_serial(long A, long B, int is_long_prefix)
+{
+    long E36C;
+    unsigned long temp;
+
+    E36C = A / 10000L;
+
+    /* 写入 E36C */
+    WRITE_DWORD(OFF_E30F, (unsigned long)E36C);
+
+    /* 写入 E370 = A % 10000 */
+    WRITE_DWORD(OFF_E370, (unsigned long)(A % 10000L));
+
+    /* 计算并写入 E374 */
+    temp = (unsigned long)((E36C % 100L) + (B % 100L) * 100L);
+    WRITE_DWORD(OFF_E374, temp);
+
+    /* 计算并写入 E378 */
+    temp = (unsigned long)((E36C / 100L) + (B / 100L) * 100L);
+    WRITE_DWORD(OFF_E378, temp);
+
+    /* 设置标志 */
+    WRITE_BYTE(OFF_E008, is_long_prefix ? 0x10 : 0x00);
 }
 
 int main(void)
 {
     char serial[20];
-    int part1, n;
-    long part2, A, B, E36C;
+    int part1, n, is_long_prefix;
+    long part2, A, B;
+    unsigned long auth;
 
-    init_data();
+    /* 初始化数据区 */
+    init_data_segment();
 
     printf("Enter serial no: ");
     scanf("%s", serial);
@@ -120,17 +162,19 @@ int main(void)
         return 1;
     }
 
+    /* 判断前半段长度 */
+    is_long_prefix = (serial[2] != '-') ? 1 : 0;
+
     B = (long)(part1 & 0xFFF);
     A = part2;
-    E36C = A / 10000L;
 
-    /* 写入数据区 */
-    g_data.data_E370 = (unsigned long)(A % 10000L);
-    g_data.data_E374 = (unsigned long)((E36C % 100L) + (B % 100L) * 100L);
-    g_data.data_E378 = (unsigned long)((E36C / 100L) + (B / 100L) * 100L);
-    g_data.flag_byte = (serial[2] != '-') ? 0x10 : 0x00;
+    /* 预处理并写入数据区 */
+    preprocess_serial(A, B, is_long_prefix);
 
-    printf("The authorization code is %08lX.\n", calc_auth());
+    /* 计算授权码 */
+    auth = calc_auth();
+
+    printf("The authorization code is %08lX.\n", auth);
 
     return 0;
 }
