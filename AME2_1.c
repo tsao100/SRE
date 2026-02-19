@@ -9,14 +9,14 @@ unsigned long keygen(long part2)
 
     unsigned long A, C;
     unsigned long v4, mix1, v10;
-    unsigned long t1, t2;
-    long t3;
+    unsigned long eax, edi;
+    long edx;
 
-    /* ---------- main() 第一段 ---------- */
+    /* ---------- main 邏輯 ---------- */
+
     Q1 = part2 / 10000L;
     R1 = part2 % 10000L;
 
-    /* ---------- main() 第二段 ---------- */
     low12 = part2 & 0x0FFFL;
 
     Q2 = low12 / 100;
@@ -25,34 +25,66 @@ unsigned long keygen(long part2)
     R3 = Q1 % 100;
     Q3 = Q1 / 100;
 
-    A = (unsigned long)R1;
-    C = (unsigned long)(R3 + 100 * R2);
+    A = R1;
+    C = R3 + 100 * R2;
 
     /* ---------- sub_3A698 ---------- */
 
-    t1 = (A / 256) ^ 0x41;
-    v4 = t1 + 1;
+    edi = (A / 256);
+    edi ^= 0x41;
+    edi += 1;
+
+    v4 = edi;
 
     mix1 = (v4 << 23) + (v4 << 15);
 
-    t2 = (C / 256) ^ 0x4D;
+    eax = (C / 256);
+    eax ^= 0x4D;
 
-    v10 = v4 + mix1 + t2;
+    eax += mix1;
+    eax += 1;
 
-    v10 += 1;
+    edi = v4 + eax;
 
-    v10 += (v10 >> 16);
+    v10 = edi;
 
-    v10 ^= 0x0000ACAD;
+    edi = (long)v10 >> 16;
+    edi += v10;
 
-    t3 = (long)(C & 0xFF);
+    eax = v10 + edi;
 
-    if (t3 >= 0x80)
-        t3 -= 0x100;
+    /* 這裡原本有 imul eax,esi,... 但 esi=0 所以忽略 */
 
-    t3 ^= 0xD2;
+    eax ^= 0;          /* no-op */
+    /* 只 XOR 低16bit */
+    eax = (eax & 0xFFFF0000UL) | ((eax & 0xFFFF) ^ 0xACAD);
 
-    return v10 + t3;
+    edx = C;
+
+    edx ^= 0x32;
+
+    eax += edx;
+
+    /* branch 多半不進 */
+
+    edi = eax;
+
+    edi = (edi >> 1) + edi;
+
+    eax = C;
+
+    edx = eax;
+
+    eax &= 0xFF;
+
+    if ((long)edx < 0 && eax != 0)
+        eax -= 0x100;
+
+    eax ^= 0xD2;
+
+    eax += edi;
+
+    return eax;
 }
 
 int main()
