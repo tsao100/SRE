@@ -1,57 +1,56 @@
-/* keygen.c */
-/* MSC 6.0 16-bit compatible */
+/* keygen_msc6.c */
+/* Microsoft C 6.0 - 16 bit DOS */
 
 #include <stdio.h>
-#include <stdlib.h>
+
+unsigned long mul32(unsigned long a, unsigned long b)
+{
+    /* 保證 32-bit wraparound */
+    unsigned long r;
+    r = a * b;
+    return r;    /* MSC6 會自動取低 32-bit */
+}
 
 unsigned long generate_code(unsigned long serial)
 {
-    unsigned long A, B, C;
+    unsigned long B, C;
     unsigned long edi;
 
-    /* split serial */
-    A = serial / 10000UL;
     B = serial % 10000UL;
     C = serial % 4096UL;
 
-    /* algorithm */
     edi = B;
 
     edi += 0x6AA602B0UL;
-    edi &= 0xFFFFFFFFUL;
-
-    edi *= 0x075BCD15UL;
-    edi &= 0xFFFFFFFFUL;
+    edi = mul32(edi, 0x075BCD15UL);
 
     edi += 0x0000ACADUL;
-    edi &= 0xFFFFFFFFUL;
+    edi = mul32(edi, 0x4DUL);
 
-    edi *= 0x4DUL;
-    edi &= 0xFFFFFFFFUL;
-
-    edi *= 0xB1UL;
-    edi &= 0xFFFFFFFFUL;
+    edi = mul32(edi, 0xB1UL);
 
     edi += C;
-    edi &= 0xFFFFFFFFUL;
-
-    edi *= 0xD2UL;
-    edi &= 0xFFFFFFFFUL;
+    edi = mul32(edi, 0xD2UL);
 
     return edi;
 }
 
 int main(void)
 {
-    char input[32];
+    char input[40];
+    int prefix;
     unsigned long serial;
     unsigned long code;
 
-    printf("Enter serial (format XXX-YYYYYYYY): ");
-    scanf("%31s", input);
+    printf("Enter serial (XXX-YYYYYYYY): ");
+    scanf("%39s", input);
 
-    /* 取 '-' 後面的數字 */
-    serial = strtoul(strchr(input, '-') + 1, NULL, 10);
+    /* 用 sscanf 解析 */
+    if (sscanf(input, "%d-%lu", &prefix, &serial) != 2)
+    {
+        printf("Invalid format!\n");
+        return 1;
+    }
 
     code = generate_code(serial);
 
