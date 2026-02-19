@@ -1,60 +1,74 @@
-/* keygen_msc6.c */
-/* Microsoft C 6.0 - 16 bit DOS */
-
 #include <stdio.h>
 
-unsigned long mul32(unsigned long a, unsigned long b)
+unsigned long keygen(long part2)
 {
-    /* 保證 32-bit wraparound */
-    unsigned long r;
-    r = a * b;
-    return r;    /* MSC6 會自動取低 32-bit */
+    long Q1, R1;
+    long low12;
+    long Q2, R2;
+    long R3, Q3;
+
+    unsigned long A, C;
+    unsigned long v4, mix1, v10;
+    unsigned long t1, t2;
+    long t3;
+
+    /* ---------- main() 第一段 ---------- */
+    Q1 = part2 / 10000L;
+    R1 = part2 % 10000L;
+
+    /* ---------- main() 第二段 ---------- */
+    low12 = part2 & 0x0FFFL;
+
+    Q2 = low12 / 100;
+    R2 = low12 % 100;
+
+    R3 = Q1 % 100;
+    Q3 = Q1 / 100;
+
+    A = (unsigned long)R1;
+    C = (unsigned long)(R3 + 100 * R2);
+
+    /* ---------- sub_3A698 ---------- */
+
+    t1 = (A / 256) ^ 0x41;
+    v4 = t1 + 1;
+
+    mix1 = (v4 << 23) + (v4 << 15);
+
+    t2 = (C / 256) ^ 0x4D;
+
+    v10 = v4 + mix1 + t2;
+
+    v10 += 1;
+
+    v10 += (v10 >> 16);
+
+    v10 ^= 0x0000ACAD;
+
+    t3 = (long)(C & 0xFF);
+
+    if (t3 >= 0x80)
+        t3 -= 0x100;
+
+    t3 ^= 0xD2;
+
+    return v10 + t3;
 }
 
-unsigned long generate_code(unsigned long serial)
+int main()
 {
-    unsigned long B, C;
-    unsigned long edi;
-
-    B = serial % 10000UL;
-    C = serial % 4096UL;
-
-    edi = B;
-
-    edi += 0x6AA602B0UL;
-    edi = mul32(edi, 0x075BCD15UL);
-
-    edi += 0x0000ACADUL;
-    edi = mul32(edi, 0x4DUL);
-
-    edi = mul32(edi, 0xB1UL);
-
-    edi += C;
-    edi = mul32(edi, 0xD2UL);
-
-    return edi;
-}
-
-int main(void)
-{
-    char input[40];
-    int prefix;
-    unsigned long serial;
-    unsigned long code;
+    int part1;
+    long part2;
+    unsigned long result;
 
     printf("Enter serial (XXX-YYYYYYYY): ");
-    scanf("%39s", input);
 
-    /* 用 sscanf 解析 */
-    if (sscanf(input, "%d-%lu", &prefix, &serial) != 2)
-    {
-        printf("Invalid format!\n");
+    if (scanf("%d-%ld", &part1, &part2) != 2)
         return 1;
-    }
 
-    code = generate_code(serial);
+    result = keygen(part2);
 
-    printf("Authorization Code = %08lX\n", code);
+    printf("Authorization Code = %08lX\n", result);
 
     return 0;
 }
