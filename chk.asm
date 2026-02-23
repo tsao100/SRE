@@ -1,18 +1,18 @@
 
-include	dosx.ah
+include dosx.ah
 
 assume cs : _text
 assume es : nothing, ss : nothing, ds : _text, fs : nothing, gs : nothing
 
 
 ; Segment type : Pure code
-_text	segment	para public use32 'code'
+_text   segment para public use32 'code'
 
-aPkSer db 'Enter serial no: ', 00H
-aShowCode db	'The authorization code is %08.0lX.', 0AH, 00H
-aS		db '%s',00H
+aPkSer db 'Enter AutoCAD R11 serial no: ', 00H
+aShowCode db    'The authorization code is %08.0lX.', 0AH, 00H
+aS              db '%s',00H
 aTemp   db 14h dup(0)
-aDLD	db '%d-%ld',0h
+aDLD    db '%d-%ld',0h
 
 dword_DEAC dd 6AA602B0h, 0
 dword_DEB4 dd 1
@@ -207,10 +207,10 @@ db 0
 byte_E3D9 dd 0
 
 
-extrn	printf : near; C library routine
-extrn	scanf : near
-extrn	sscanf : near
-extrn	strcpy : near
+extrn   printf : near; C library routine
+extrn   scanf : near
+extrn   sscanf : near
+extrn   strcpy : near
 
 ads_getvar      proc near
 
@@ -219,14 +219,14 @@ arg_4 equ dword ptr  12h
 
     push    ebp
     mov     ebp, esp
-	lea		eax, aTemp
-	push	eax
-	mov		[ebp + arg_4], eax
-	lea		eax, aS
-	push	eax
+	lea             eax, aTemp
+	push    eax
+	mov             [ebp + arg_4], eax
+	lea             eax, aS
+	push    eax
 	call    scanf
-	add		esp,8
-	mov		eax, 13ECh
+	add             esp,8
+	mov             eax, 13ECh
 	leave
 	ret
 ads_getvar   endp
@@ -243,7 +243,7 @@ sub_3A1D4 endp
 sub_3A3E8 proc near
 
 	mov     dword_DEB4, 1
-;	leave
+;       leave
 	ret
 sub_3A3E8 endp
 
@@ -298,7 +298,7 @@ imul    eax, esi, 75BCD15h
 xor eax, edi
 xor ax, 0ACADh
 mov     edi, [ebp + var_C]
-xor di, 32h
+xor di, 45h
 add     edi, eax
 mov     eax, off_DECC
 test    byte ptr[eax - 0C4h], 10h
@@ -338,13 +338,13 @@ xor edi, eax
 mov     eax, off_DEC4
 mov[eax - 1E4h], edi
 
-push	edi
-lea		eax, aShowCode
-push	eax
-call	printf
+push    edi
+lea             eax, aShowCode
+push    eax
+call    printf
 
-mov		ax, 4c01h
-int		21h
+mov             ax, 4c01h
+int             21h
 
 
 mov     eax, 1
@@ -443,10 +443,10 @@ push    ebp
 mov     ebp, esp
 sub     esp, 18h
 
-lea		eax, aPkSer
-push	eax
+lea             eax, aPkSer
+push    eax
 call    printf
-add		esp, 4
+add             esp, 4
 
 call    sub_3A7B4
 mov     eax, off_DED0
@@ -499,8 +499,8 @@ call    sub_3A1D4
 main endp
 
 
-public	_start_
-_start_	proc	near
+public  _start_
+_start_ proc    near
 call    main
 _start_           endp
 
