@@ -71,7 +71,7 @@ unsigned long keygen(int part1, long part2)
 
     edx = R1 % 256; //edx=CB
 
-    edx ^= 0x32;
+    edx ^= 0x32; //0x45 for AME 1.0
 
     eax += edx;
 
