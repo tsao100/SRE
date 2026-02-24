@@ -8,7 +8,7 @@ assume es : nothing, ss : nothing, ds : _text, fs : nothing, gs : nothing
 ; Segment type : Pure code
 _text	segment	para public use32 'code'
 
-aPkSer db 'Enter AutoCAD R11 serial no: ', 00H
+aPkSer db 'Enter AutoCAD R12 serial no: ', 00H
 aShowCode db	'The authorization code is %08.0lX.', 0AH, 00H
 aS		db '%s',00H
 aTemp   db 14h dup(0)
@@ -298,7 +298,7 @@ imul    eax, esi, 75BCD15h
 xor eax, edi
 xor ax, 0ACADh
 mov     edi, [ebp + var_C]
-xor di, 45h
+xor di, 32h
 add     edi, eax
 mov     eax, off_DECC
 test    byte ptr[eax - 0C4h], 10h
