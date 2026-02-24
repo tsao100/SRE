@@ -129,7 +129,7 @@ int main()
 
     if (scanf("%d-%ld", &part1, &part2) != 2)
         return 1;
-    //part1 = 110;
+    //part1 = 117;
     //part2 = 10058907;	
     //printf("%d-%ld", &part1, &part2); //used for Autofeed mode.
 
