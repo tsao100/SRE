@@ -8,7 +8,7 @@ assume es : nothing, ss : nothing, ds : _text, fs : nothing, gs : nothing
 ; Segment type : Pure code
 _text	segment	para public use32 'code'
 
-aPkSer db 'Enter AutoCAD R11 serial no: ', 00H
+aPkSer db 'Enter AutoCAD R12 serial no: ', 00H
 aShowCode db	'The authorization code is %08.0lX.', 0AH, 00H
 aS		db '%s',00H
 aTemp   db 14h dup(0)
@@ -298,7 +298,7 @@ imul    eax, esi, 75BCD15h
 xor eax, edi
 xor ax, 0ACADh
 mov     edi, [ebp + var_C]
-xor di, 45h
+xor di, 32h
 add     edi, eax
 mov     eax, off_DECC
 test    byte ptr[eax - 0C4h], 10h
@@ -450,35 +450,35 @@ add		esp, 4
 
 call    sub_3A7B4
 mov     eax, off_DED0
-mov     eax, [eax-69h]
+mov     eax, [eax-69h] ;[eax-69h]=9D3A6Fh=10304111d
 cdq
 mov     ecx, 2710h
 idiv    ecx
 mov     edx, off_E32C
-mov     [edx-1Dh], eax
+mov     [edx-1Dh], eax  ;[479d-1dh]=406h=1030
 mov     eax, off_DED0
-mov     eax, [eax-69h]
+mov     eax, [eax-69h] ;[eax-69h]=9D3A6Fh=10304111d
 cdq
 idiv    ecx
 mov     eax, off_E330
-mov     [eax-33h], edx
+mov     [eax-33h], edx	;[493d-33h]=100Fh=4111d
 mov     eax, off_DECC
-mov     eax, [eax-0C5h]
+mov     eax, [eax-0C5h] ;[159h-0C5h]=1075h
 and     eax, 0FFFh
 cdq
 mov     ecx, 64h ; 'd'
 idiv    ecx
-lea     edx, [edx+edx*4]
-lea     edx, [edx+edx*4]
-lea     edx, ds:0[edx*4]
+lea     edx, [edx+edx*4]	;edx=0
+lea     edx, [edx+edx*4]	;edx=0
+lea     edx, ds:0[edx*4]	;edx=0
 mov     eax, off_E32C
-mov     eax, [eax-1Dh]
+mov     eax, [eax-1Dh]  ;[479d-1dh]=406h=1030
 mov     [ebp+var_18], edx
 cdq
-idiv    ecx
+idiv    ecx	; EAX=0A=10d, EDX=1E=30d
 add     edx, [ebp+var_18]
 mov     eax, off_E334
-mov     [eax-53h], edx
+mov     [eax-53h], edx ;[4B7-53]=1E
 mov     eax, off_DECC
 mov     eax, [eax-0C5h]
 and     eax, 0FFFh
