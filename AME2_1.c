@@ -125,12 +125,13 @@ int main()
     long part2;
     unsigned long result;
 
-    printf("Enter AutoCAD serial (XXX-YYYYYYYY): ");
+    printf("Enter AutoCAD R12 serial (XXX-YYYYYYYY): ");
 
     if (scanf("%d-%ld", &part1, &part2) != 2)
         return 1;
     //part1 = 110;
-    //part2 = 10524473;
+    //part2 = 10058907;	
+    //printf("%d-%ld", &part1, &part2); //used for Autofeed mode.
 
     result = keygen(part1, part2);
 
