@@ -149,4 +149,4 @@ The English descriptions above are Chinese Translation as below:-
 
 該操作的演示：[視頻](https://youtu.be/rULei8prL60)
 
-有了AI的幫助，我將asm以MSC 6.0改寫，如AME2_1.c所示。
+有了AI的幫助，我將asm以MSC 6.0改寫，如AME2_1.c所示，AME 1.0的部份詳見程式碼中的註解。
