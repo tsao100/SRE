@@ -33,6 +33,8 @@ Before discover the disambled code in IDA pro, it's better to recognize the disa
 
 A live demo of the opertion: [Video](https://youtu.be/pMIo7gBMCk8)
 
+With the help of AI, I rewrote asm for MSC 6.0, as shown in AME2_1.c. For details on the AME 1.0 part, please refer to the comments in the code.
+
 # Hiew - SRE
 
 I install the iDOS 2 in my iPad mini 4. And discovered that Ctrl+F1 was occupied by the Keyboard mapper function which was the 16/32 bit toggle hot key in HIEW, therefore, I try to trace the assembly code of Hiew 6.11 to change the Hot key as Shift+F1. 
@@ -111,6 +113,8 @@ The English descriptions above are Chinese Translation as below:-
 
 該操作的演示：[視頻](https://youtu.be/pMIo7gBMCk8)
 
+有了AI的幫助，我將asm以MSC 6.0改寫，如AME2_1.c所示，AME 1.0的部份詳見程式碼中的註解。
+
 # Hiew - 逆向工程
 
 我在 iPad mini 4 中安裝了 iDOS 2。發現 Ctrl+F1 被鍵盤映射器功能佔用，該功能是 HIEW 中的 16/32 位元彙編代碼切換熱鍵，因此，我嘗試追踪 Hiew 6.11 的彙編代碼為將熱鍵更改為 Shift+F1。
@@ -149,4 +153,3 @@ The English descriptions above are Chinese Translation as below:-
 
 該操作的演示：[視頻](https://youtu.be/rULei8prL60)
 
-有了AI的幫助，我將asm以MSC 6.0改寫，如AME2_1.c所示，AME 1.0的部份詳見程式碼中的註解。
