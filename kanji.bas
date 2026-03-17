@@ -1,0 +1,593 @@
+請依以下程式碼, 寫出python程式，產出SYMBOL.COD, KANDAT.DAT, KANDAT2.DAT三個字型檔：
+ 
+DECLARE FUNCTION GETC! (i!)
+DECLARE SUB READCODE (NKANF!)
+DECLARE SUB SYMBO2 (XP!, YP!, HEIGHT!, IBC$, THETA!, N!, FAI!, SPACE!)
+DECLARE SUB VTOM (XP!, YP!, IXP!, IYP!)
+DECLARE SUB OUTMET (IXQ!, IYQ!, IPCL!, IPEN!, ITYPE!)
+DECLARE SUB OUTMET2 (IX!, IY!, UPDOWN!)
+DECLARE SUB CRT (F!, A1!, A2!, A3!, A4!, A5!, A6!)
+DECLARE SUB XEND ()
+DECLARE SUB PLOT (XP!, YP!, IPEN!)
+DECLARE FUNCTION ISPRINT! (CODE!)
+DECLARE FUNCTION GetDirPath$ (kind%)
+DECLARE SUB KANJI (XP!, YP!, HEIGHT!, SPACE!, JI$, THETA!, N!)
+DECLARE SUB KANJI2 (XP!, YP!, HEIGHT!, SPACE!, JI$, THETA!, N!, ASR!, FAIV!, FAIH!)
+DECLARE FUNCTION JISTOXY! (JISCODE!)
+DECLARE FUNCTION HANTOZEN& (CODE!)
+DECLARE FUNCTION MSTOJIS! (MSCODE!)
+
+
+CLS
+SCREEN 88
+	CONST KanH = 14                         '文字の大きさ（漢字）
+	CONST FirstLine = 361                   '最初の表示ライン位置（Y方向）
+
+	Tstr$ = "計算区間 "                     '計算区間の表示
+	CALL KANJI(50, FirstLine, KanH, 0, Tstr$, 0, KLEN(Tstr$))
+
+END
+DATA      &H2120,&H217F, &H2220,&H222F, &H232F,&H233A, &H2340,&H235B
+DATA      &H2360,&H237B, &H2420,&H2474, &H2520,&H2577, &H2620,&H2639
+DATA      &H2640,&H2659, &H2720,&H2742, &H2750,&H2772, &H3020
+
+SUB CRT (F, A1, A2, A3, A4, A5, A6)
+	DIM ZPCOLOR(16)
+	FOR i = 1 TO 16
+		ZPCOLOR(i) = i
+	NEXT i
+	SELECT CASE F
+		CASE 1  'XINT
+			SCREEN 88, , 0, 0
+		CASE 2  'XVIEWP
+			CLS 1
+		CASE 3  'XEND
+		CASE 4  'PLOT
+			IPEN = INT(A1)
+			SELECT CASE IPEN
+				CASE 2
+					LINE (A4, A5)-(A2, A3)
+				CASE ELSE
+			END SELECT
+		CASE 5  'NEWPEN
+			IPEN = ((ZIPN - 1) MOD maxpencrt) + 1
+			COLOR ZPCOLOR(IPEN)
+		CASE 6  'PAINT
+			PAINT (A1, A2), ZPCOLOR(A3), ZPCOLOR(A4)
+		CASE ELSE
+	END SELECT
+END SUB
+
+FUNCTION GETC (i)
+	GETC = ASC(MID$(ZPAT$, i, 1))
+END FUNCTION
+
+FUNCTION GetDirPath$ (kind%)
+	i% = 1
+	path$ = ""
+	IF kind% = FontDir THEN
+		KeyWord$ = FontData$
+	ELSE
+		KeyWord$ = Exec$
+	END IF
+
+	DO WHILE ENVIRON$(i%) <> ""
+		Tmp$ = UCASE$(ENVIRON$(i%))             'DOSの環境文字列の取得
+		N% = KLEN(Tmp$)
+		env$ = ""
+		FOR J% = 1 TO N%
+			A$ = KMID$(Tmp$, J%, 1)
+			IF LTRIM$(A$) <> "" THEN
+				env$ = env$ + A$
+			END IF
+		NEXT J%
+		ANS% = KINSTR(env$, KeyWord$)           'フォントディレクトリ、実行モジュールディレクトリの検索
+		IF ANS% <> 0 THEN
+			path$ = KMID$(env$, KLEN(KeyWord$) + 1, KLEN(env$) - KLEN(KeyWord$))
+			EXIT DO
+		END IF
+		i% = i% + 1
+	LOOP
+	GetDirPath$ = path$
+END FUNCTION
+
+FUNCTION HANTOZEN& (CODE)
+	IF &H20 > CODE OR CODE > &H7E THEN
+		HANTOZEN = 0
+		EXIT FUNCTION
+	END IF
+  
+	SELECT CASE CODE
+		CASE &H30 TO &H39
+			HANTOZEN& = &H824F& + (CODE - &H30)
+		CASE &H41 TO &H5A
+			HANTOZEN& = &H8260& + (CODE - &H41)
+		CASE &H61 TO &H7A
+			HANTOZEN& = &H8281& + (CODE - &H61)
+		CASE &H20
+			HANTOZEN& = &H8140&
+		CASE &H21
+			HANTOZEN& = &H8149&
+		CASE &H22
+			HANTOZEN& = &H8168&
+		CASE &H23
+			HANTOZEN& = &H8194&
+		CASE &H24
+			HANTOZEN& = &H8190&
+		CASE &H25
+			HANTOZEN& = &H8193&
+		CASE &H26
+			HANTOZEN& = &H8195&
+		CASE &H27
+			HANTOZEN& = &H8166&
+		CASE &H28
+			HANTOZEN& = &H8169&
+		CASE &H29
+			HANTOZEN& = &H816A&
+		CASE &H2A
+			HANTOZEN& = &H8196&
+		CASE &H2B
+			HANTOZEN& = &H817B&
+		CASE &H2C
+			HANTOZEN& = &H814C&
+		CASE &H2D
+			HANTOZEN& = &H817C&
+		CASE &H2E
+			HANTOZEN& = &H8144&
+		CASE &H2F
+			HANTOZEN& = &H815E&
+		CASE &H3A
+			HANTOZEN& = &H8146&
+		CASE &H3B
+			HANTOZEN& = &H8147&
+		CASE &H3C
+			HANTOZEN& = &H8183&
+		CASE &H3D
+			HANTOZEN& = &H8181&
+		CASE &H3E
+			HANTOZEN& = &H8184&
+		CASE &H3F
+			HANTOZEN& = &H8148&
+		CASE &H40
+			HANTOZEN& = &H8197&
+		CASE &H5B
+			HANTOZEN& = &H816D&
+		CASE &H5C
+			HANTOZEN& = &H818F&
+		CASE &H5D
+			HANTOZEN& = &H816E&
+		CASE &H5E
+			HANTOZEN& = &H814F&
+		CASE &H5F
+			HANTOZEN& = &H8151&
+		CASE &H60
+			HANTOZEN& = &H8165&
+		CASE &H7B
+			HANTOZEN& = &H816F&
+		CASE &H7C
+			HANTOZEN& = &H8162&
+		CASE &H7D
+			HANTOZEN& = &H8170&
+		CASE &H7E
+			HANTOZEN& = &H8150&
+	END SELECT
+END FUNCTION
+
+FUNCTION ISPRINT (CODE)
+	IF &H20 <= CODE AND CODE <= &H7E THEN ISPRINT = 1 ELSE ISPRINT = 0
+END FUNCTION
+
+FUNCTION JISTOXY (JISCODE)
+
+
+
+DIM ZKC(25)
+FOR i = 0 TO 22
+	READ ZKC(i)
+NEXT i
+	STATIC RECNO AS LONG
+	HCD = INT(JISCODE / &H100)
+	LCD = JISCODE MOD &H100
+	IF (JISCODE > &H2120 AND JISCODE < &H277E) THEN KTYPE = 1 ' HIKANJI
+	IF (HCD >= &H30 AND HCD <= &H4F) THEN KTYPE = 2           ' KANJI_1
+	IF (HCD >= &H50 AND HCD <= &H75) THEN KTYPE = 3           ' KANJI_2
+	IF (JISCODE > &H7620 AND JISCODE < &H76D0) THEN KTYPE = 4 ' KANJI_U
+
+   SELECT CASE KTYPE
+		CASE 1
+			KCBASE = 0
+			FOR i = 1 TO 22 STEP 2
+				IF (ZKC(i - 1) < JISCODE AND JISCODE < ZKC(i)) THEN
+					RECNO = JISCODE - ZKC(i - 1) + KCBASE
+					EXIT FOR
+				END IF
+			KCBASE = KCBASE + ZKC(i) - ZKC(i - 1) - 1
+			NEXT i
+		CASE 2
+			IF (LCD < &H21 OR &H7E < LCD) GOTO EXITSWITCH
+			RECNO = (HCD - &H30) * 94 + LCD - &H20 + 453
+		CASE 3
+			IF (LCD < &H21 OR &H7E < LCD) GOTO EXITSWITCH
+			RECNO = (HCD - &H50) * 94 + (LCD - &H20) + 4000
+		CASE 4
+			RECNO = JISCODE - &H7620 + 3518
+		CASE ELSE
+	END SELECT
+EXITSWITCH:
+	JISTOXY = RECNO
+
+END FUNCTION
+
+SUB KANJI (XP, YP, HEIGHT, SPACE, JI$, THETA, N)
+	KANJI2 XP, YP, HEIGHT, SPACE, JI$, THETA, N, 1, 0!, 0!
+END SUB
+
+SUB KANJI2 (XP, YP, HEIGHT, SPACE, JI$, THETA, N, ASR, FAIV, FAIH)
+CONST symbolcod$ = "\SYMBOL.COD"        ' XYPLOTのフォントファイル名（シンボル）
+CONST kanjifile1$ = "\KANDAT.DAT"       ' XYPLOTのフォントファイル名（漢字１）
+CONST kanjifile2$ = "\KANDAT2.DAT"      ' XYPLOTのフォントファイル名（漢字２）
+	DIM DATS(121), DAT(20), IDAT1(32)
+	DIM JIS(1000)
+
+	FKANJI1 = fileno1
+	FKANJI2 = fileno2
+
+'*** 93.08.23. ***
+	path$ = GetDirPath$(FontDir%)
+	OPEN path$ + kanjifile1$ FOR RANDOM ACCESS READ AS FKANJI1 LEN = 32
+	OPEN path$ + kanjifile2$ FOR RANDOM ACCESS READ AS FKANJI2 LEN = 32
+
+'   OPEN kanjifile1$ FOR RANDOM ACCESS READ AS FKANJI1 LEN = 32
+'   OPEN kanjifile2$ FOR RANDOM ACCESS READ AS FKANJI2 LEN = 32
+'*** end ***
+	LJIS = LEN(JI$)
+	FOR i = 0 TO LJIS - 1
+		JIS(i) = ASC(MID$(JI$, i + 1, 1))
+	NEXT i
+					  
+	XPS = XP
+	YPS = YP
+	XPP = XP
+	YPP = YP
+	IF (XP = 999!) THEN XPP = ZXSLR
+	IF (YP = 999!) THEN YPP = ZYSLR
+	HRKAN = ABS(HEIGHT) / 32!
+	IF (HEIGHT < 0!) THEN
+		IXS = -16
+		IYS = -16
+	ELSE
+		IXS = 0
+		IYS = 0
+	END IF
+
+	SI = SIN(THETA * pi180)
+	CO = COS(THETA * pi180)
+	TAV = TAN(FAIV * pi180)
+	TAH = TAN(FAIH * pi180)
+	NABS = ABS(N)
+
+	IF (HEIGHT <> 0!) THEN
+		SPW = ABS(SPACE / HEIGHT) * 32!
+	ELSE
+		SPW = 0!
+	END IF
+
+	M = 0
+	XMG = 0!
+	FOR i = 0 TO NABS - 1
+
+		IF (N > 0) THEN
+			IF (ISPRINT(JIS(M)) = 0) THEN
+				MSCODE = JIS(M) * 256 + JIS(M + 1)
+				JISCODE = MSTOJIS(MSCODE)
+				ZENHAN = 2
+				M = M + 2
+			ELSE
+				MSCODE = HANTOZEN&(JIS(M))
+				JISCODE = MSTOJIS(MSCODE)
+				IF (SPACE >= 0) THEN
+					ZENHAN = 1
+				ELSE
+					ZENHAN = 2
+				END IF
+				M = M + 1
+			END IF
+		ELSE
+			EXIT SUB
+'            JISCODE = JIS(M) * 256 + JIS(M + 1)
+'            ZENHAN = 2
+'            M = M + 2
+		END IF
+
+		XYCODE = JISTOXY(JISCODE)
+		IF (XYCODE < 1) THEN XYCODE = 1
+		ASS = ASR * ZENHAN / 2!
+
+		IF (XYCODE > 4000) THEN
+			XYCODE = XYCODE - 4000
+			FPTR = FKANJI2
+		ELSE
+			FPTR = FKANJI1
+		END IF
+		FIELD FPTR, 32 AS BUFF$
+	  
+		IF (FPTR = NULL) THEN
+			EXIT SUB
+		END IF
+
+		RECNO = XYCODE + 8
+		GET FPTR, RECNO
+		FOR K = 0 TO 15
+			DAT(K) = CVI(MID$(BUFF$, K * 2 + 1, 2))
+		NEXT K
+
+		FOR K = 0 TO 14
+			DATS(K) = DAT(K)
+		NEXT K
+
+		NR = 1
+		DO
+			RECNO = DAT(15) + 8
+			GET FPTR, RECNO
+			FOR K = 0 TO 15
+				DAT(K) = CVI(MID$(BUFF$, K * 2 + 1, 2))
+			NEXT K
+		  
+			FOR K = 0 TO 14
+				DATS(NR * 15 + K) = DAT(K)
+			NEXT K
+			NR = NR + 1
+		LOOP WHILE (DAT(15) > 0 AND NR < 8)
+	  
+		NPKAN = DATS(0)
+		FOR J = 1 TO NPKAN
+			IP = DATS(J)
+			IPEN = INT(IP / 10000) + 1
+			YKANO = (IP MOD 100) + IYS
+			XKANO = (IP MOD 10000) / 100 + IXS
+			YKAN = TAV * XKANO + YKANO
+			XKAN = TAH * YKANO + XKANO
+			IF (SPACE >= 0!) THEN
+			  XPS = ((XKAN * ASS + XMG) * CO - YKAN * SI) * HRKAN + XPP
+			  YPS = ((XKAN * ASS + XMG) * SI + YKAN * CO) * HRKAN + YPP
+			ELSE
+			  XPS = (((32! - YKAN) * ASS + XMG) * CO - XKAN * SI) * HRKAN + XPP
+			  YPS = (((32! - YKAN) * ASS + XMG) * SI + XKAN * CO) * HRKAN + YPP
+			END IF
+			PLOT XPS, YPS, IPEN
+		NEXT J
+		XMG = XMG + ZENHAN * ASR * 16! + SPW
+	 NEXT i
+   
+	 ZXSLR = XMG * CO * HRKAN + XPP
+	 ZYSLR = XMG * SI * HRKAN + YPP
+	 CLOSE FKANJI1
+	 CLOSE FKANJI2
+END SUB
+
+FUNCTION MSTOJIS (MSCODE)
+	MASK = &H100
+	IL = MSCODE MOD MASK
+	IH = INT(MSCODE / MASK)
+	IF (IH <= 159) THEN
+		IHH = 2 * (IH - 129) + 33
+	ELSE
+		IHH = 2 * (IH - 224) + 95
+	END IF
+	IF (IL >= 159) THEN IHH = IHH + 1
+
+	IF ((IL >= 64) AND (IL <= 126)) THEN ILL = IL - 31
+	IF ((IL >= 128) AND (IL <= 158)) THEN ILL = IL - 32
+	IF ((IL >= 159) AND (IL <= 252)) THEN ILL = IL - 126
+	MSTOJIS = IHH * 256 + ILL
+END FUNCTION
+
+SUB OUTMET (IXQ, IYQ, IPCL, IPEN, ITYPE)
+	STATIC DATF$, IC
+	SELECT CASE ITYPE
+		CASE 0
+			IC = IC + 1
+			DATF$ = DATF$ + RIGHT$("     " + STR$(IXQ), 6)
+			DATF$ = DATF$ + RIGHT$("     " + STR$(IYQ), 6)
+			DATF$ = DATF$ + RIGHT$(STR$(IPCL), 2) + RIGHT$(STR$(IPEN), 2)
+			IF IC = 15 THEN
+				DATF$ = DATF$ + SPACE$(16)
+				PRINT #fmeta1, DATF$;
+				IC = 0
+				DATF$ = ""
+			END IF
+		CASE 1
+			IF IC <> 0 THEN
+				DATF$ = DATF$ + SPACE$((16 - IC) * 16)
+				PRINT #fmeta1, DATF$;
+			END IF
+			PRINT #fmeta1, "***EOF" + SPACE$(250)
+			IC = 0
+			DATF$ = ""
+		CASE ELSE
+	END SELECT
+END SUB
+
+SUB OUTMET2 (IX, IY, UPDOWN)
+	IF (ZAFTERL = 1) THEN
+		ZAFTERL = 0
+		IXQ = INT((ZXLR - ZVXL) / ZRSYSM + .5)
+		IYQ = INT((ZYLR - ZVYL) / ZRSYSM + .5)
+		OUTMET2 IXQ, IYQ, 3
+	END IF
+
+	ZMCOUNT = ZMCOUNT + 1
+	ICON = (UPDOWN - 2) * 8 + (ZIPN - 1)    ' /* ICON : 0 ?` 0XF  */
+	DAT$ = RIGHT$(HEX$(ICON), 1)
+	DAT$ = DAT$ + RIGHT$("00" + HEX$(IX), 3)
+	DAT$ = DAT$ + RIGHT$("00" + HEX$(IY), 3) + " "
+	PRINT #fmeta2, DAT$;
+	IF (ZMCOUNT >= pline) THEN
+		PRINT #fmeta2, ""
+		ZMCOUNT = 0
+	END IF
+END SUB
+
+SUB PLOT (XP, YP, IPEN)
+'
+	STATIC IPENZ              ' IPEN=1
+'
+	IF IPEN = 999 THEN
+		XEND
+		EXIT SUB
+	END IF
+
+	IF ABS(IPEN) <> 1 THEN IPENZ = INT(ABS(IPEN))
+
+	XPR = XP * ZCOR - YP * ZSIR
+	YPR = XP * ZSIR + YP * ZCOR
+
+	XQ = XPR * ZFAC + ZXOR
+	YQ = YPR * ZFAC + ZYOR
+ 
+	IF ZIMETA = 1 THEN
+		IXQ = INT(XQ / ZRSYS * 25! + .5)
+		IYQ = INT(YQ / ZRSYS * 25! + .5)
+		OUTMET IXQ, IYQ, ZIPN, IPEN, 0
+	END IF
+
+	IF ZIMETA2 = 1 THEN
+		IXQ = INT((XQ - ZVXL) / ZRSYSM + .5)
+		IYQ = INT((YQ - ZVYL) / ZRSYSM + .5)
+		OUTMET2 IXQ, IYQ, IPENZ
+	END IF
+
+	VTOM ZXLR, ZYLR, IXOLD, IYOLD
+	VTOM XQ, YQ, IXNEW, IYNEW
+ 
+	SELECT CASE IPENZ
+		CASE 2
+			CRT 4, 2, IXNEW, IYNEW, IXOLD, IYOLD, 0
+			IF ZIPLOT <> 0 THEN
+				IXQL = INT((ZXLR - ZVXL) / ZRSYSP + .5)
+				IYQL = INT((ZYLR - ZVYL) / ZRSYSP + .5)
+				IXQQ = INT((XQ - ZVXL) / ZRSYSP + .5)
+				IYQQ = INT((YQ - ZVYL) / ZRSYSP + .5)
+				'PLOTTER 4, 2, IXQQ, IYQQ, IXQL, IYQL, 0
+			END IF
+			ZXLR = XQ
+			ZYLR = YQ
+		CASE IS >= 3
+			IF ZIPLOT <> 0 THEN
+				IXQQ = INT((XQ - ZVXL) / ZRSYSP + .5)
+				IYQQ = INT((YQ - ZVYL) / ZRSYSP + .5)
+				'PLOTTER 4, 3, IXQQ, IYQQ, 0, 0, 0
+			END IF
+			ZXLR = XQ
+			ZYLR = YQ
+		CASE ELSE
+	END SELECT
+
+	IF IPEN >= 0 THEN EXIT SUB
+
+	ZXOR = XQ
+	ZYOR = YQ
+END SUB
+
+SUB READCODE (NKANF)
+	ZPAT$ = ""
+	'--- read symbol code ----
+'*** 93.08.23. ***
+	OPEN GetDirPath$(FontDir%) + symbolcod$ FOR RANDOM AS fileno1 LEN = 128
+
+'    OPEN symbolcod$ FOR RANDOM AS fileno1 LEN = 128
+'*** end ***
+	FIELD 1, 128 AS CHAR$
+	NREC = INT(NKANF / 128) + 1
+	FOR IC = 1 TO NREC
+		GET 1
+		ZPAT$ = ZPAT$ + CHAR$
+	NEXT IC
+	CLOSE fileno1
+END SUB
+
+SUB SYMBO2 (XP, YP, HEIGHT, IBC$, THETA, N, FAI, SPACE)
+	DIM IBCI(256)
+	IF N = 0 THEN
+		COLOR 2
+		PRINT "!? SYMBO2 ERROR"; N
+		COLOR 7
+		EXIT SUB
+	END IF
+
+	NKANF = 4472
+	NABS = ABS(N)
+'--- read symbol code ---
+	IF LEN(ZPAT$) < 4000 THEN READCODE (NKANF)
+  
+	IF N > 0 THEN
+		FOR i = 1 TO NABS
+			IBCI(i) = ASC(MID$(IBC$, i, 1))
+		NEXT i
+	ELSE
+		FOR i = 1 TO NABS
+			IBCI(i) = ASC(MID$(IBC$, i, 1))
+		NEXT i
+	END IF
+' --- drawing ---
+	XPS = XP
+	YPS = YP
+	XPP = XP
+	YPP = YP
+	DD = 12
+	IF XP = 999! THEN XPP = ZXSLR
+	IF YP = 999! THEN YPP = ZYSLR
+	HRSYM = ABS(HEIGHT) / DD
+	IF N < 0 THEN
+		IXS = -4
+		IYS = -6
+	ELSE
+		IXS = 0
+		IYS = 0
+	END IF
+  
+	SI = SIN(THETA * 3.141592 / 180)
+	CO = COS(THETA * 3.141592 / 180)
+	FAID = FAI
+	IF ABS(FAI) > 60! THEN FAID = 0!
+	TA = TAN(FAID * 3.141592 / 180)
+
+	FOR i = 1 TO NABS
+		XMG = (i - 1) * (DD + SPACE)
+		IXSD = IXS
+		IF IBCI(i) < 16 THEN IXSD = IXS - 3
+		IADSYM = GETC(IBCI(i) * 2 + 1) * 256 + GETC(IBCI(i) * 2 + 2)
+		INPSYM = GETC(IADSYM + 1)
+		FOR J = 1 TO INPSYM
+			IDAT = GETC(IADSYM + J * 2 + 1)
+			IPEN = GETC(IADSYM + J * 2) + 2
+			YSYM = (IDAT MOD 16) - 2 + IYS
+			XSYM = INT(IDAT / 16) - 1 + IXSD
+			XSYM = XSYM + TA * YSYM
+			XPS = ((XSYM + XMG) * CO - YSYM * SI) * HRSYM + XPP
+			YPS = ((XSYM + XMG) * SI + YSYM * CO) * HRSYM + YPP
+			  
+			PLOT XPS, YPS, IPEN
+		NEXT J
+	NEXT i
+	ZXSLR = ((DD + XMG) * CO) * HRSYM + XPP
+	ZYSLR = ((DD + XMG) * SI) * HRSYM + YPP
+END SUB
+
+SUB SYMBOL (XP, YP, HEIGHT, IBC$, THETA, N)
+	SYMBO2 XP, YP, HEIGHT, IBC$, THETA, N, 0!, 0!
+END SUB
+
+SUB VTOM (XP, YP, IXP, IYP)
+	IXP = CINT(ZXDOT1 * (XP - ZXWOR) / ZXWIDTH + ZXMCRT)
+	IYP = CINT(-ZYDOT1 * (YP - ZYWOR) / ZYWIDTH + ZYWIDTH / ZRSYS + ZYMCRT)
+END SUB
+
+SUB XEND
+	CRT 3, 0, 0, 0, 0, 0, 0
+	IF ZIPLOT <> 0 THEN
+		'PLOTTER 3, 0, 0, 0, 0, 0, 0
+		CLOSE #fplt
+	END IF
+END SUB
+
